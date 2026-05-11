@@ -68,12 +68,22 @@ If I declined to supply an icon, omit the `CFBundleIconFile` key (do not leave a
 ```bash
 #!/bin/bash
 osascript <<'EOF'
+set wasRunning to application "Terminal" is running
 tell application "Terminal"
     activate
-    do script "cd <WORK_DIR> && claude"
+    if wasRunning then
+        do script "cd <WORK_DIR> && claude"
+    else
+        repeat until (count of windows) > 0
+            delay 0.05
+        end repeat
+        do script "cd <WORK_DIR> && claude" in window 1
+    end if
 end tell
 EOF
 ```
+
+The `wasRunning` branch avoids a Terminal.app quirk: when Terminal is not already running, `activate` launches it and Terminal opens its own default startup window, then a plain `do script` would open a *second* window. By checking the running state first and reusing the startup window (`in window 1`) when Terminal had to be launched, exactly one window opens in either case.
 
 **Steps you must take, in order:**
 

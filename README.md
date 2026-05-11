@@ -39,14 +39,24 @@ When launched, `Contents/MacOS/ClaudeCodeLauncher` runs:
 ```bash
 #!/bin/bash
 osascript <<'EOF'
+set wasRunning to application "Terminal" is running
 tell application "Terminal"
     activate
-    do script "cd <YOUR_WORK_DIR> && claude"
+    if wasRunning then
+        do script "cd <YOUR_WORK_DIR> && claude"
+    else
+        repeat until (count of windows) > 0
+            delay 0.05
+        end repeat
+        do script "cd <YOUR_WORK_DIR> && claude" in window 1
+    end if
 end tell
 EOF
 ```
 
 `osascript` tells Terminal to open a new window. Terminal spawns a login shell that sources `~/.zshrc` (or `~/.bash_profile`), so `claude` resolves through the user's normal `PATH` even though the launching process has a minimal environment.
+
+The `wasRunning` branch handles a Terminal.app quirk: if Terminal isn't already running, `activate` launches it and Terminal creates its own default startup window, then `do script` would open a second window. The script captures Terminal's running state before activating it; when Terminal was not running, it reuses the auto-created startup window (`in window 1`) instead of opening a new one.
 
 ## Build it
 
@@ -103,9 +113,17 @@ PLIST
 cat > "$APP/Contents/MacOS/ClaudeCodeLauncher" <<SH
 #!/bin/bash
 osascript <<'EOF'
+set wasRunning to application "Terminal" is running
 tell application "Terminal"
     activate
-    do script "cd ${WORK_DIR} && claude"
+    if wasRunning then
+        do script "cd ${WORK_DIR} && claude"
+    else
+        repeat until (count of windows) > 0
+            delay 0.05
+        end repeat
+        do script "cd ${WORK_DIR} && claude" in window 1
+    end if
 end tell
 EOF
 SH
