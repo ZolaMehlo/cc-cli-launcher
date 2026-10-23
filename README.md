@@ -191,6 +191,19 @@ After editing, re-run `chmod +x` if your editor stripped permissions, then test 
 
 **Dock shows generic icon after install:** `killall Dock`. If still wrong, also `killall Finder`.
 
+**Clicking the Dock icon (or Spotlight result) does nothing, but the app works when opened from `/Applications`:** an old copy of the bundle with the same `CFBundleIdentifier` is still registered with LaunchServices, typically one sitting in the Trash. The Dock and Spotlight resolve the app by bundle ID and can land on the stale, launch-disabled copy. Check for duplicate registrations:
+```bash
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+"$LSREGISTER" -dump | grep -B20 "^identifier: *com.local.cc-cli-launcher" | grep '^path:'
+```
+Unregister the stale path, re-register the real bundle, then restart the Dock:
+```bash
+"$LSREGISTER" -u "$HOME/.Trash/Claude Code Launcher.app"
+"$LSREGISTER" -f "/Applications/Claude Code Launcher.app"
+killall Dock
+```
+Substitute your own bundle ID and paths if you changed them. Emptying the Trash alone does not always clear the stale registration.
+
 **App opens, Terminal opens, but `claude` not found:** the user's shell init (`~/.zshrc` or `~/.bash_profile`) is not putting the `claude` install directory on `PATH`. Verify `which claude` works in a fresh Terminal window. If it does, the app should also work; if it doesn't, fix the shell config first or replace `claude` in the launch script with the absolute path returned by `which claude`.
 
 **App refuses to launch with "damaged" or signing error:** if you copy the bundle from a synced source (OneDrive, iCloud Drive, network share, an internet download), macOS may quarantine it.
